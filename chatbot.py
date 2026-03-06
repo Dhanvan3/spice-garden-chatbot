@@ -5,7 +5,9 @@ from langchain_text_splitters import CharacterTextSplitter
 from langchain_community.vectorstores import Chroma
 from langchain_groq import ChatGroq
 from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_community.chains import RetrievalQA
+from langchain.prompts import PromptTemplate
+from langchain_core.runnables import RunnablePassthrough
+from langchain_core.output_parsers import StrOutputParser
 
 load_dotenv()
 
@@ -21,13 +23,23 @@ def load_knowledge_base():
 def create_chatbot(vectorstore):
     llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0)
     retriever = vectorstore.as_retriever()
-    chatbot = RetrievalQA.from_chain_type(
-        llm=llm,
-        chain_type="stuff",
-        retriever=retriever
+    
+    prompt = PromptTemplate.from_template("""
+You are a helpful assistant for Spice Garden restaurant.
+Answer the question based only on the context below.
+If you don't know, say you don't have that information.
+
+Context: {context}
+Question: {question}
+Answer:""")
+
+    chain = (
+        {"context": retriever, "question": RunnablePassthrough()}
+        | prompt
+        | llm
+        | StrOutputParser()
     )
-    return chatbot
+    return chain
 
 def ask(chatbot, question):
-    response = chatbot.invoke({"query": question})
-    return response["result"]
+    return chatbot.invoke(question)
