@@ -22,13 +22,14 @@ def load_knowledge_base():
     return vectorstore
 
 def create_chatbot(vectorstore):
-    #llm = ChatGroq(model="llama3-8b-8192", temperature=0)
     llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0)
+    
+    retriever = vectorstore.as_retriever()
     
     chatbot = RetrievalQA.from_chain_type(
         llm=llm,
         chain_type="stuff",
-        retriever=vectorstore.as_retriever()
+        retriever=retriever
     )
     
     return chatbot
@@ -36,17 +37,3 @@ def create_chatbot(vectorstore):
 def ask(chatbot, question):
     response = chatbot.invoke({"query": question})
     return response["result"]
-
-if __name__ == "__main__":
-    print("Loading Spice Garden knowledge base...")
-    vectorstore = load_knowledge_base()
-    chatbot = create_chatbot(vectorstore)
-    print("Ready! Ask me anything about Spice Garden.")
-    print("Type 'quit' to exit\n")
-    
-    while True:
-        question = input("You: ")
-        if question.lower() == "quit":
-            break
-        answer = ask(chatbot, question)
-        print(f"Bot: {answer}\n")
